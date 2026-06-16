@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import CreateCourseForm from './CreateCourseForm';
 import PublishButton from './PublishButton';
+import { getCourseImage } from '@/lib/courseImages';
 
 export default async function Dashboard() {
   const supabase = await createClient();
@@ -10,7 +11,7 @@ export default async function Dashboard() {
 
   const { data: courses } = await supabase
     .from('courses')
-    .select('id, titulo, estado, precio, categories(nombre)')
+    .select('id, titulo, estado, precio, categories(nombre, slug)')
     .eq('instructor_id', user.id)
     .order('created_at', { ascending: false });
 
@@ -28,14 +29,17 @@ export default async function Dashboard() {
           {courses && courses.length > 0 && (
             <div className="grid" style={{ marginBottom: 32 }}>
               {(courses as any[]).map(c => (
-                <div key={c.id} className="card course-card">
+                <div key={c.id} className="card course-card" data-state={c.estado}>
                   <a href={`/courses/${c.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{(c.categories as any)?.nombre}</span>
+                    <div className="course-card-image">
+                      <img src={getCourseImage(c.titulo, c.categories?.slug ?? c.categories?.nombre)} alt={c.titulo} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-sm)' }}>
+                      <span style={{ fontSize: 'var(--text-utility)', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>{(c.categories as any)?.nombre}</span>
                       <span className={`badge badge-${c.estado}`}>{c.estado}</span>
                     </div>
                     <h3>{c.titulo}</h3>
-                    <div className="price" style={{ marginTop: 8 }}>{c.precio === 0 ? 'Gratis' : `S/ ${c.precio}`}</div>
+                    <div className="price" style={{ marginTop: 'var(--space-sm)' }}>{c.precio === 0 ? 'Gratis' : `S/ ${c.precio}`}</div>
                   </a>
                   <PublishButton courseId={c.id} estado={c.estado} />
                 </div>

@@ -2,13 +2,14 @@ import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import EnrollButton from './EnrollButton';
 import ReviewForm from './ReviewForm';
+import { getCourseImage } from '@/lib/courseImages';
 
 export default async function CoursePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
 
   const [{ data: course }, { data: { user } }, { data: lessons }, { data: reviews }] = await Promise.all([
-    supabase.from('courses').select('*, categories(nombre)').eq('id', id).maybeSingle(),
+    supabase.from('courses').select('*, categories(nombre, slug)').eq('id', id).maybeSingle(),
     supabase.auth.getUser(),
     supabase.from('lessons').select('id, titulo, position').eq('course_id', id).order('position'),
     supabase.from('reviews').select('id, rating, texto, created_at, profiles:student_id(nombre)').eq('course_id', id).order('created_at', { ascending: false }),
@@ -37,6 +38,9 @@ export default async function CoursePage({ params }: { params: Promise<{ id: str
 
       <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: '1fr 300px', gap: 32, alignItems: 'start' }}>
         <div>
+          <div className="course-detail-banner">
+            <img src={getCourseImage(course.titulo, (course.categories as any)?.slug ?? (course.categories as any)?.nombre)} alt={course.titulo} />
+          </div>
           <div style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: 8 }}>{(course.categories as any)?.nombre}</div>
           <h1 style={{ fontSize: '1.8rem', marginBottom: 12 }}>{course.titulo}</h1>
           <p style={{ color: '#4b5563', lineHeight: 1.6, marginBottom: 24 }}>{course.descripcion}</p>

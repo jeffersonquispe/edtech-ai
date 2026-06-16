@@ -25,18 +25,24 @@ export default function Navbar() {
 
   return (
     <nav className="nav">
-      <a href="/" className="nav-brand">EdTech Platform</a>
+      <a href="/" className="nav-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+        <span style={{ color: 'var(--color-neutral-900)' }}>EdTech</span>
+        <span style={{ color: 'var(--color-indigo)' }}>Platform</span>
+        <span style={{ width: '6px', height: '6px', backgroundColor: 'var(--color-sage)', borderRadius: '50%', boxShadow: '0 0 8px var(--color-sage)', display: 'inline-block' }} title="Plataforma activa"></span>
+      </a>
       <div className="nav-links">
         {user ? (
           <>
-            <a href="/dashboard">Mis cursos</a>
-            <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>{user.email}</span>
-            <button className="btn btn-secondary" onClick={logout}>Salir</button>
+            <a href="/dashboard" style={{ fontWeight: 500 }}>Mis cursos</a>
+            <span style={{ background: 'rgba(91, 79, 255, 0.08)', color: 'var(--color-indigo)', padding: '4px 12px', borderRadius: '99px', fontSize: '13px', fontWeight: 500 }}>
+              {user.email}
+            </span>
+            <button className="btn btn-secondary" style={{ padding: '8px 16px' }} onClick={logout}>Salir</button>
           </>
         ) : (
           <>
-            <a href="/login">Iniciar sesión</a>
-            <a href="/register" className="btn btn-primary">Registrarse</a>
+            <a href="/login" style={{ fontWeight: 500, marginRight: 'var(--space-xs)' }}>Iniciar sesión</a>
+            <a href="/register" className="btn btn-primary" style={{ padding: '8px 16px' }}>Registrarse</a>
           </>
         )}
       </div>

@@ -5,44 +5,94 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev        # Start development server
-npm run build      # Production build
+npm run dev        # Start dev server; http://localhost:3000 (hot reload)
+npm run build      # Next.js build (production)
+npm run start      # Run production server
 npm run lint       # ESLint
-npm run test       # Run tests once (Vitest)
-npm run test:watch # Run tests in watch mode
+npm run test       # Run Vitest once
+npm run test:watch # Vitest watch mode
 ```
 
 ## Architecture
 
-Full-stack EdTech LMS built with **Next.js 15 App Router**, **TypeScript**, and **Supabase** (PostgreSQL + Auth).
+Full-stack EdTech LMS: **Next.js 15 App Router** + **Supabase** (PostgreSQL + Auth) + **RLS as single source of truth for authorization**.
 
-### Key directories
+### High-Level Layers
 
-- `src/app/api/courses/` — REST API routes. Pattern: authenticate with `requireUser()`, run query, translate errors via `handleApiError()`.
-- `src/app/courses/[id]/` — Course detail page with client components (`EnrollButton`, `ReviewForm`).
-- `src/lib/supabase/server.ts` — Server-side Supabase client (RLS-aware, reads cookies for auth).
-- `src/lib/supabase/client.ts` — Browser-side Supabase client for client components.
-- `src/lib/api/auth.ts` — `requireUser()` helper; throws 401 if unauthenticated.
-- `src/lib/api/errors.ts` — Maps PostgreSQL error codes to HTTP responses (23505 → 409, 42501 → 403, etc.).
-- `supabase/migrations/` — SQL migrations; run in order against the Supabase project.
+**Presentation (Next.js Server & Client Components)**
+- `src/app/page.tsx` — Home: list published courses (server-rendered via `await createClient()`)
+- `src/app/login/`, `src/app/register/` — Auth forms (client components; use `createClient()` for browser)
+- `src/app/courses/[id]/page.tsx` — Course detail (server fetch + embedded client components)
+- `src/app/dashboard/page.tsx` — User panel (role-aware: show instructor or student view)
+- `src/components/Navbar.tsx` — Reactive nav (watches `auth.onAuthStateChange()`)
+- `src/app/globals.css` — Base styles (no UI library; custom CSS)
 
-### Authorization model
+**API Layer (Next.js Route Handlers)**
+- Every endpoint calls `requireUser()` first or handles public access explicitly
+- `src/app/api/courses/route.ts` — GET (public list, RLS filters), POST (instructor only via RLS)
+- `src/app/api/courses/[id]/route.ts` — GET, PATCH (owner only), DELETE (owner only)
+- `src/app/api/courses/[id]/enroll` — POST (student inscribe; RLS enforces published course)
+- `src/app/api/courses/[id]/reviews` — GET (public), POST (inscribed student only)
+- `src/app/api/lessons/[id]` — PATCH/DELETE (owner of course only)
+- Pattern: authenticate → run query → translate errors via `pgErrorToResponse()`
 
-**RLS is the single source of truth for authorization.** API routes do not re-implement permission logic — they rely on Supabase Row Level Security policies defined in `supabase/migrations/0003_rls_policies.sql`. When an operation is forbidden, Postgres returns a `42501` error which `handleApiError` translates to 403.
+**Database (Supabase PostgreSQL + RLS)**
+- RLS policies are the sole source of truth for all authorization
+- Migrations in `supabase/migrations/` run in order (0001 schema → 0002 triggers → 0003 RLS policies → 0004 seed)
+- Helper functions in RLS: `is_instructor()`, `owns_course()`, `is_enrolled()`, `course_published()`
+- Error codes: 23505 (unique violation) → 409, 42501 (RLS deny) → 403, 23503 (FK) → 400
 
-Key RLS helper functions: `is_instructor()`, `owns_course(course_id)`, `is_enrolled(course_id)`, `course_published(course_id)`.
+### Key Files
 
-### Data model
+- `src/lib/supabase/server.ts` — Server-side Supabase client (uses cookies for RLS context)
+- `src/lib/supabase/client.ts` — Browser-side Supabase client (for login/logout/onAuthStateChange)
+- `src/lib/api/auth.ts` — `requireUser()`: throws HttpError(401) if no session
+- `src/lib/api/errors.ts` — `pgErrorToResponse()`: maps Postgres errors to HTTP; `HttpError` class
 
-- `profiles` — 1:1 with `auth.users`; `rol` enum: `student` | `instructor`. Auto-created via trigger in migration 0002.
-- `courses` — owned by instructors; `estado` enum: `draft` | `published` | `archived`.
-- `lessons` — ordered by `position` within a course.
-- `enrollments` — student ↔ course junction with UNIQUE constraint.
-- `reviews` — one per student per course (UNIQUE constraint).
+### Authorization: RLS is Single Source of Truth
 
-### Environment variables
+API routes do **NOT** re-check permissions — they delegate to RLS:
+1. `await requireUser(supabase)` → fail early if no session (401)
+2. Run Supabase query (RLS filters rows automatically)
+3. If forbidden by RLS, Postgres returns `42501` → endpoint returns 403
+4. If unique constraint fails, Postgres returns `23505` → endpoint returns 409
 
-- `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` — used in both browser and server clients.
-- `SUPABASE_SERVICE_ROLE_KEY` — only for migrations/seeding, never used in request paths.
+Example: `POST /api/courses/:id/enroll`
+- User doesn't need to check "is student" — RLS does it
+- Postgres enforces `student_id = auth.uid()` in the INSERT check
+- Postgres enforces course is published via `course_published(course_id)` helper
+- If either fails, 42501 → 403 Forbidden
 
-Path alias `@/*` maps to `src/*`.
+**Never hardcode permission logic in the endpoint.** Trust RLS.
+
+### Data Model
+
+- `profiles` — 1:1 with auth.users; `rol`: student | instructor (auto-created on signup via 0002 trigger)
+- `courses` — owned by instructor; `estado`: draft | published | archived
+- `lessons` — N:1 with courses; ordered by `position`
+- `enrollments` — N:N (student ↔ course); UNIQUE constraint prevents dups
+- `reviews` — 1:1 per (student, course); UNIQUE constraint
+
+### Server vs. Client Components
+
+**Server Components** (`src/app/*.tsx` pages):
+- Fetch from Supabase with `await createClient()` + cookies
+- RLS automatically filters rows for the current user
+- No session token in code; cookies handled by Next.js
+
+**Client Components** (marked `'use client'`):
+- Use `createClient()` (browser version) to authenticate, watch auth state
+- Call APIs via `fetch('/api/...')` — cookies auto-sent
+- Update UI based on `auth.onAuthStateChange()` listener
+
+**Mixed Example** (`src/app/courses/[id]/page.tsx`):
+- Server: fetch course, user, lessons, reviews
+- Server: check enrollment status (to show/hide buttons)
+- Client children: `<EnrollButton>`, `<ReviewForm>` (use browser Supabase client)
+
+### Environment Variables
+
+- `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` — public; used by both server and browser
+- `SUPABASE_SERVICE_ROLE_KEY` — private; never expose (not used in any request path)
+
+Path alias: `@/*` → `src/*`
