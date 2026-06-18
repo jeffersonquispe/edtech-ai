@@ -9,12 +9,17 @@ export default async function Dashboard() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const [{ data: profile }, { data: courses }, { data: categories }] = await Promise.all([
+  const [{ data: profile }, { data: courses }, { data: enrolledCourses }, { data: categories }] = await Promise.all([
     supabase.from('profiles').select('rol').eq('id', user.id).maybeSingle(),
     supabase
       .from('courses')
       .select('id, titulo, estado, precio, categories(nombre, slug)')
       .eq('instructor_id', user.id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('enrollments')
+      .select('courses(id, titulo, precio, estado, categories(nombre, slug))')
+      .eq('student_id', user.id)
       .order('created_at', { ascending: false }),
     supabase.from('categories').select('id, nombre, slug'),
   ]);
@@ -57,9 +62,31 @@ export default async function Dashboard() {
       ) : (
         <>
           <h2 style={{ fontSize: '1.1rem', marginBottom: 16 }}>Mis inscripciones</h2>
-          <p style={{ color: '#6b7280' }}>
-            Explora <a href="/">los cursos disponibles</a> e inscríbete en los que te interesen.
-          </p>
+          {enrolledCourses && enrolledCourses.length > 0 ? (
+            <div className="grid" style={{ marginBottom: 32 }}>
+              {enrolledCourses.map((enrollment: any) => {
+                const c = enrollment.courses;
+                return (
+                  <div key={c.id} className="card course-card">
+                    <a href={`/courses/${c.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <div className="course-card-image">
+                        <img src={getCourseImage(c.titulo, c.categories?.slug ?? c.categories?.nombre)} alt={c.titulo} />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-sm)' }}>
+                        <span style={{ fontSize: 'var(--text-utility)', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>{c.categories?.nombre}</span>
+                      </div>
+                      <h3>{c.titulo}</h3>
+                      <div className="price" style={{ marginTop: 'var(--space-sm)' }}>{c.precio === 0 ? 'Gratis' : `S/ ${c.precio}`}</div>
+                    </a>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p style={{ color: '#6b7280' }}>
+              Aún no te has inscrito en ningún curso. Explora <a href="/">los cursos disponibles</a> e inscríbete en los que te interesen.
+            </p>
+          )}
         </>
       )}
     </div>

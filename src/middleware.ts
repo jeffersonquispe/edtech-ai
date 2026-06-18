@@ -1,9 +1,12 @@
-import { type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 export async function middleware(request: NextRequest) {
-  // Refresh session if it's about to expire
-  const response = request.nextResponse.clone();
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,11 +14,7 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          return request.cookies.getSetCookie().map(cookie => {
-            const [name, ...rest] = cookie.split('=');
-            const value = rest.join('=');
-            return { name, value };
-          });
+          return request.cookies.getAll().map(({ name, value }) => ({ name, value }));
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
@@ -26,6 +25,7 @@ export async function middleware(request: NextRequest) {
     }
   );
 
+  // Refresh session if it's about to expire
   await supabase.auth.getUser();
 
   return response;
