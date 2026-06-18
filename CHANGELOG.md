@@ -8,16 +8,47 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 ## [Unreleased] — Cambios futuros planificados
 
 ### Por hacer
-- [ ] Vista de lecciones (`/lessons/:id`) con contenido completo para estudiantes inscritos
 - [ ] Panel del instructor para agregar y editar lecciones dentro de un curso
-- [ ] Vista "Mis cursos inscritos" para estudiantes en `/dashboard`
 - [ ] Edición de curso publicado (título, descripción, precio, categoría)
 - [ ] Archivar curso (`estado: archived`) desde el dashboard
 - [ ] Página de perfil de usuario (`/profile`) — editar nombre y avatar
 - [ ] Filtro por categoría en la lista de cursos (`/`)
 - [ ] Paginación en la lista de cursos
-- [ ] Protección de rutas con middleware de Supabase (redirigir a `/login` si no hay sesión)
 - [ ] Confirmación por correo al registrarse (flujo de Supabase Auth email confirm)
+
+---
+
+## [0.3.0] — 2026-06-17
+
+### Añadido
+- Página `/lessons/:id` — visualización de contenido de lección con control de acceso (solo dueño o inscrito)
+- Navegación entre lecciones (anterior/siguiente) en la página de lección
+- Validación de entrada centralizada (`src/lib/api/validation.ts`):
+  - Validación de títulos, texto, precio, rating, posición, UUID
+  - Límites de longitud: título (200 chars), texto (5000 chars)
+  - Rangos: precio ≥ 0, rating 1-5, position ≥ 0
+- Middleware de sesión (`src/middleware.ts`) para refresh automático de token
+- Server Actions (`src/app/actions/courses.ts`) para todas las mutaciones:
+  - `createCourse()`, `updateCourse()`, `enrollCourse()`
+  - `addLesson()`, `submitReview()`, `publishCourse()`
+- Índices de base de datos para performance:
+  - `courses_created_at_idx` — para sorting por fecha
+  - `reviews_course_created_at_idx` — composite para queries de reseñas
+  - `lessons_course_position_idx` — composite para lecciones
+  - `courses_estado_created_at_idx` — para filtros por estado
+- Vista "Mis cursos inscritos" para estudiantes en `/dashboard`
+
+### Mejorado
+- Refactorización de formularios a React 19 Server Actions (CreateCourseForm, EnrollButton, ReviewForm, PublishButton)
+- Reemplazo de `router.refresh()` por `revalidatePath()` para cache más granular
+- Validación exhaustiva en todos los endpoints POST/PATCH
+- Error handling mejorado en PublishButton
+- Auth state en dashboard ahora queryea tabla `profiles` en lugar de metadata (más seguro)
+
+### Corregido
+- **Estudiantes no veían sus cursos inscritos en dashboard** — ahora se listan correctamente
+- **Endpoint validación inconsistente** — normalizada en todos los routes
+- **Race condition en EnrollButton** — Server Actions previenen clicks duplicados automáticamente
 
 ---
 
