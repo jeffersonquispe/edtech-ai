@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/api/auth";
 import { pgErrorToResponse, HttpError, jsonError } from "@/lib/api/errors";
+import { validateTitle, validateText, validatePrice, validateUUID } from "@/lib/api/validation";
 
 // GET /api/courses — público. Solo cursos publicados (RLS). Filtro ?category=<slug>.
 export async function GET(req: NextRequest) {
@@ -33,9 +34,19 @@ export async function POST(req: NextRequest) {
     const user = await requireUser(supabase);
     const body = await req.json();
     const { titulo, descripcion, category_id, precio, estado } = body ?? {};
-    if (!titulo || !category_id) {
-      return jsonError(400, "titulo y category_id son obligatorios");
-    }
+
+    // Validate inputs
+    const titleValidation = validateTitle(titulo);
+    if (!titleValidation.valid) return jsonError(400, titleValidation.error!);
+
+    const descValidation = validateText(descripcion, false);
+    if (!descValidation.valid) return jsonError(400, descValidation.error!);
+
+    const categoryValidation = validateUUID(category_id);
+    if (!categoryValidation.valid) return jsonError(400, "category_id inválido");
+
+    const priceValidation = validatePrice(precio);
+    if (!priceValidation.valid) return jsonError(400, priceValidation.error!);
 
     const { data, error } = await supabase
       .from("courses")

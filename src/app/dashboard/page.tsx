@@ -9,15 +9,17 @@ export default async function Dashboard() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: courses } = await supabase
-    .from('courses')
-    .select('id, titulo, estado, precio, categories(nombre, slug)')
-    .eq('instructor_id', user.id)
-    .order('created_at', { ascending: false });
+  const [{ data: profile }, { data: courses }, { data: categories }] = await Promise.all([
+    supabase.from('profiles').select('rol').eq('id', user.id).maybeSingle(),
+    supabase
+      .from('courses')
+      .select('id, titulo, estado, precio, categories(nombre, slug)')
+      .eq('instructor_id', user.id)
+      .order('created_at', { ascending: false }),
+    supabase.from('categories').select('id, nombre, slug'),
+  ]);
 
-  const { data: categories } = await supabase.from('categories').select('id, nombre, slug');
-
-  const isInstructor = user.user_metadata?.rol === 'instructor';
+  const isInstructor = profile?.rol === 'instructor';
 
   return (
     <div className="container">

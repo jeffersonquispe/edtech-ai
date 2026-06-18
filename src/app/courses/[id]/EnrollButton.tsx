@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { enrollCourse } from '@/app/actions/courses';
 
 export default function EnrollButton({ courseId, enrolled, isLoggedIn }: { courseId: string; enrolled: boolean; isLoggedIn: boolean }) {
   const [loading, setLoading] = useState(false);
@@ -10,17 +11,20 @@ export default function EnrollButton({ courseId, enrolled, isLoggedIn }: { cours
   if (enrolled) return null;
 
   const enroll = async () => {
-    if (!isLoggedIn) { router.push('/login'); return; }
-    setLoading(true);
-    setError('');
-    const res = await fetch(`/api/courses/${courseId}/enroll`, { method: 'POST' });
-    setLoading(false);
-    if (!res.ok) {
-      const body = await res.json();
-      setError(body.error ?? 'Error al inscribirse');
+    if (!isLoggedIn) {
+      router.push('/login');
       return;
     }
-    router.refresh();
+    setLoading(true);
+    setError('');
+
+    try {
+      await enrollCourse(courseId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al inscribirse');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

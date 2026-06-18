@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/api/auth";
 import { pgErrorToResponse, HttpError, jsonError } from "@/lib/api/errors";
+import { validateRating, validateText, validateUUID } from "@/lib/api/validation";
 
 // GET /api/courses/[id]/reviews — público.
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
+
+  const idValidation = validateUUID(id);
+  if (!idValidation.valid) return jsonError(400, idValidation.error!);
+
   const { data, error } = await supabase
     .from("reviews")
     .select("id, rating, texto, student_id, created_at, profiles:student_id(nombre, avatar_url)")
@@ -25,9 +30,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const user = await requireUser(supabase);
     const body = await req.json();
     const { rating, texto } = body ?? {};
-    if (typeof rating !== "number" || rating < 1 || rating > 5) {
-      return jsonError(400, "rating debe ser un entero entre 1 y 5");
-    }
+
+    const idValidation = validateUUID(id);
+    if (!idValidation.valid) return jsonError(400, idValidation.error!);
+
+    const ratingValidation = validateRating(rating);
+    if (!ratingValidation.valid) return jsonError(400, ratingValidation.error!);
+
+    const textValidation = validateText(texto, false);
+    if (!textValidation.valid) return jsonError(400, textValidation.error!);
 
     const { data, error } = await supabase
       .from("reviews")
