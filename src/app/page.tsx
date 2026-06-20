@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import CourseCatalog from './CourseCatalog';
+import SearchCourses from '@/components/SearchCourses';
 
 export default async function Home() {
   const supabase = await createClient();
@@ -18,7 +19,15 @@ export default async function Home() {
 
   return (
     <div className="container">
-      <CourseCatalog initialCourses={(courses as any) ?? []} categories={(categories as any) ?? []} />
+      <div style={{ marginBottom: 40 }}>
+        <h1 style={{ fontSize: '2rem', marginBottom: 24 }}>Explorar Cursos</h1>
+        <SearchCourses />
+      </div>
+
+      <div>
+        <h2 style={{ fontSize: '1.5rem', marginBottom: 24 }}>Catálogo Completo</h2>
+        <CourseCatalog initialCourses={(courses as any) ?? []} categories={(categories as any) ?? []} />
+      </div>
     </div>
   );
 }
