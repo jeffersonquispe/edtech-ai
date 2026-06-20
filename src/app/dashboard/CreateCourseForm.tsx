@@ -13,10 +13,11 @@ export default function CreateCourseForm({ categories }: { categories: Category[
     setLoading(true);
     setError('');
 
-    const formData = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
     try {
       await createCourse(formData);
-      e.currentTarget.reset();
+      form.reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear curso');
     } finally {

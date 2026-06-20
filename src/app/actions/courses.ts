@@ -227,3 +227,21 @@ export async function publishCourse(courseId: string) {
   revalidatePath(`/courses/${courseId}`);
   return data;
 }
+
+export async function deleteCourse(courseId: string) {
+  const supabase = await createClient();
+  await supabase.auth.getUser();
+
+  const idValidation = validateUUID(courseId);
+  if (!idValidation.valid) throw new Error('ID inválido');
+
+  const { error } = await supabase
+    .from('courses')
+    .delete()
+    .eq('id', courseId);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath('/dashboard');
+  return true;
+}
