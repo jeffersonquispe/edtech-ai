@@ -13,8 +13,10 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e',
+  /* Global setup para autenticación */
+  globalSetup: require.resolve('./e2e/global-setup.ts'),
   /* Run tests in files in parallel */
-  fullyParallel: true,
+  fullyParallel: false, // Sequential para flujos dependientes
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */

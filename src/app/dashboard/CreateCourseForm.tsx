@@ -26,27 +26,27 @@ export default function CreateCourseForm({ categories }: { categories: Category[
   };
 
   return (
-    <form onSubmit={submit}>
+    <form onSubmit={submit} data-testid="create-course-form">
       <div className="form-group">
         <label>Título</label>
-        <input name="titulo" required />
+        <input name="titulo" required data-testid="course-title-input" />
       </div>
       <div className="form-group">
         <label>Descripción</label>
-        <textarea name="descripcion" rows={3} />
+        <textarea name="descripcion" rows={3} data-testid="course-description-input" />
       </div>
       <div className="form-group">
         <label>Categoría</label>
-        <select name="categoryId" defaultValue={categories[0]?.id ?? ''}>
+        <select name="categoryId" defaultValue={categories[0]?.id ?? ''} data-testid="course-category-select">
           {categories.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
         </select>
       </div>
       <div className="form-group">
         <label>Precio (S/)</label>
-        <input name="precio" type="number" min={0} defaultValue={0} />
+        <input name="precio" type="number" min={0} defaultValue={0} data-testid="course-price-input" />
       </div>
       {error && <p className="error-msg">{error}</p>}
-      <button className="btn btn-primary" disabled={loading}>{loading ? 'Creando...' : 'Crear curso (borrador)'}</button>
+      <button className="btn btn-primary" disabled={loading} data-testid="create-course-button">{loading ? 'Creando...' : 'Crear curso (borrador)'}</button>
     </form>
   );
 }

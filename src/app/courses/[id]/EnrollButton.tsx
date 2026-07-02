@@ -34,6 +34,7 @@ export default function EnrollButton({ courseId, enrolled, isLoggedIn, courseTit
         style={{ width: '100%' }}
         onClick={enroll}
         disabled={loading}
+        data-testid="enroll-button"
         aria-label={
           loading
             ? 'Inscribiéndote...'

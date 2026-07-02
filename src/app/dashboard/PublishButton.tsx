@@ -29,6 +29,7 @@ export default function PublishButton({ courseId, estado }: { courseId: string; 
         style={{ fontSize: '0.75rem', padding: '4px 12px', marginTop: 10, width: '100%' }}
         onClick={publish}
         disabled={loading}
+        data-testid={`publish-button-${courseId}`}
       >
         {loading ? 'Publicando...' : 'Publicar'}
       </button>

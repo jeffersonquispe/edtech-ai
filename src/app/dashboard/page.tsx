@@ -35,9 +35,9 @@ export default async function Dashboard() {
         <>
           <h2 style={{ fontSize: '1.1rem', marginBottom: 16 }}>Mis cursos</h2>
           {courses && courses.length > 0 && (
-            <div style={{ marginBottom: 32 }}>
+            <div style={{ marginBottom: 32 }} data-testid="instructor-courses-list">
               {(courses as any[]).map(c => (
-                <div key={c.id} className="card" style={{ marginBottom: 16, padding: '20px' }}>
+                <div key={c.id} className="card" style={{ marginBottom: 16, padding: '20px' }} data-testid={`course-card-${c.id}`}>
                   <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 16 }}>
                     {/* Thumbnail */}
                     <div className="course-card-image" style={{ width: 120, height: 120 }}>
@@ -95,11 +95,11 @@ export default async function Dashboard() {
         <>
           <h2 style={{ fontSize: '1.1rem', marginBottom: 16 }}>Mis inscripciones</h2>
           {enrolledCourses && enrolledCourses.length > 0 ? (
-            <div className="grid" style={{ marginBottom: 32 }}>
+            <div className="grid" style={{ marginBottom: 32 }} data-testid="student-enrolled-courses">
               {enrolledCourses.map((enrollment: any) => {
                 const c = enrollment.courses;
                 return (
-                  <div key={c.id} className="card course-card">
+                  <div key={c.id} className="card course-card" data-testid={`enrolled-course-${c.id}`}>
                     <a href={`/courses/${c.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                       <div className="course-card-image">
                         <img src={getCourseImage(c.titulo, c.categories?.slug ?? c.categories?.nombre)} alt={c.titulo} />
