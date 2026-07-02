@@ -1,0 +1,22 @@
+{
+  "name": "edtech",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "mcp-server/index.ts",
+  "scripts": {
+    "start": "tsx mcp-server/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}

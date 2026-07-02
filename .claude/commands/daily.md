@@ -1,0 +1,1 @@
+haz un resumen de lo ultimo que se ah desarrollado durante la semana y que temas pendientes existen.

@@ -15,6 +15,37 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 - [ ] Filtro por categoría en la lista de cursos (`/`)
 - [ ] Paginación en la lista de cursos
 - [ ] Confirmación por correo al registrarse (flujo de Supabase Auth email confirm)
+- [ ] Agregar variable de entorno `NEXT_PUBLIC_APP_URL` para URLs absolutas en JSON-LD
+
+---
+
+## [0.4.0] — 2026-06-24
+
+### Añadido
+- **Página de detalle de curso `/courses/[id]/page.tsx` — reescritura completa:**
+  - `generateMetadata` con `title` y `description` dinámicos por curso (SEO S1)
+  - JSON-LD schema `Course` con `name`, `description`, `image`, `aggregateRating` y `offers` (SEO S5)
+  - Landmarks semánticos: `<main>`, `<nav aria-label="Ruta de navegación">`, `<aside>`, `<section aria-labelledby>`
+  - Lista de lecciones como `<ol>` con `aria-label` y texto de link descriptivo: `"Lección N: título"` (a11y A2, SEO S4)
+  - Lecciones bloqueadas con `🔒 aria-hidden` + `<span class="sr-only">(disponible al inscribirse)</span>` (a11y A1)
+  - Rating con `aria-hidden` en estrellas visuales + `<span class="sr-only">` para lectores de pantalla (a11y A2)
+  - Lista de reseñas como `<ul>` semántica con `sr-only` en cada rating
+  - `role="status"` en mensaje "Ya estás inscrito" para anuncio reactivo
+  - Imagen del curso migrada a `<Image>` de Next.js con `priority` y `alt` descriptivo (a11y A1, SEO S2)
+  - Breadcrumb con texto descriptivo "← Volver al catálogo de cursos" (SEO S4)
+
+### Mejorado
+- **`EnrollButton.tsx`** — `aria-label` contextual con nombre del curso en los tres estados: cargando, logueado, no logueado (a11y A2 / SEO S4). Nueva prop `courseTitle: string`.
+- **`ReviewForm.tsx`** — `<label htmlFor>` asociados a `<select id="rating">` y `<textarea id="texto">` (a11y A3 — **fix blocking**)
+- **`globals.css`** — foco de teclado explícito para toda la plataforma (a11y A5 — **fix blocking**):
+  - `.btn:focus-visible` con `outline: 2px solid var(--color-indigo)` y `outline-offset: 3px`
+  - Inputs/selects/textareas migrados de `:focus` a `:focus-visible` + fallback `:focus` para compatibilidad
+  - El indicador de foco en formularios ahora usa `rgba(91, 79, 255, 0.18)` (mayor contraste que el anterior 0.1)
+
+### Corregido
+- **`<main>` con `aria-label` redundante** — eliminado; el `<h1>` ya provee el label de página (a11y A4 nit)
+- **JSON-LD sin campo `image`** — agregado `image: appUrl + courseImageSrc` para elegibilidad en Google Rich Results (SEO S5)
+- **`ReviewForm`: labels no asociados programáticamente** — corregido con `htmlFor`/`id` en todos los controles (WCAG 1.3.1 / 4.1.2 Nivel A)
 
 ---
 

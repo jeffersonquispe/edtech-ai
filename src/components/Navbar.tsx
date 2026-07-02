@@ -1,12 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = createClient();
 
   useEffect(() => {
@@ -22,6 +23,9 @@ export default function Navbar() {
     router.push('/login');
     router.refresh();
   };
+
+  // Oculta la navbar dentro del iframe del agente.
+  if (pathname?.startsWith('/agente-edy')) return null;
 
   return (
     <nav className="nav">

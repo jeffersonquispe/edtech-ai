@@ -1,0 +1,15 @@
+{
+    "mcpServers": {
+        "edtech-context": {
+            "command": "node",
+            "args": [
+                "--import", "tsx/esm",
+                "mcp-server/index.ts"
+            ],
+            "cwd": "${workspaceFolder}/edtech",
+            "env": {
+                "BACKEND_URL": "http://localhost:3000"
+            }
+        }
+    }
+}

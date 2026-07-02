@@ -30,9 +30,10 @@ Full-stack EdTech LMS: **Next.js 15 App Router** + **Supabase** (PostgreSQL + Au
 **API Layer (Next.js Route Handlers)**
 - Every endpoint calls `requireUser()` first or handles public access explicitly
 - `src/app/api/courses/route.ts` — GET (public list, RLS filters), POST (instructor only via RLS)
-- `src/app/api/courses/[id]/route.ts` — GET, PATCH (owner only), DELETE (owner only)
+- `src/app/api/courses/[id]/route.ts` — GET (public), PATCH (owner only, includes estado/publish), DELETE (owner only)
 - `src/app/api/courses/[id]/enroll` — POST (student inscribe; RLS enforces published course)
 - `src/app/api/courses/[id]/reviews` — GET (public), POST (inscribed student only)
+- `src/app/api/courses/search` — POST (semantic search via embeddings, with text fallback; public)
 - `src/app/api/lessons/[id]` — PATCH/DELETE (owner of course only)
 - Pattern: authenticate → run query → translate errors via `pgErrorToResponse()`
 
@@ -68,10 +69,11 @@ Example: `POST /api/courses/:id/enroll`
 ### Data Model
 
 - `profiles` — 1:1 with auth.users; `rol`: student | instructor (auto-created on signup via 0002 trigger)
-- `courses` — owned by instructor; `estado`: draft | published | archived
+- `courses` — owned by instructor; `estado`: draft | published | archived; `embedding` vector(384) for semantic search
 - `lessons` — N:1 with courses; ordered by `position`
 - `enrollments` — N:N (student ↔ course); UNIQUE constraint prevents dups
 - `reviews` — 1:1 per (student, course); UNIQUE constraint
+- `embedding_jobs` — tracks async embedding generation: status (pending/processing/completed/failed), retry tracking, audit
 
 ### Server vs. Client Components
 
@@ -93,6 +95,49 @@ Example: `POST /api/courses/:id/enroll`
 ### Environment Variables
 
 - `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` — public; used by both server and browser
-- `SUPABASE_SERVICE_ROLE_KEY` — private; never expose (not used in any request path)
+- `SUPABASE_SERVICE_ROLE_KEY` — private; never expose; used by Edge Functions and `POST /api/courses/search` for embedding generation
+- `LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` — server-only; used by `POST /api/livekit/token` to sign LiveKit access tokens. Never prefix the secret with `NEXT_PUBLIC_`.
+- `NEXT_PUBLIC_LIVEKIT_URL` — public; the wss URL the browser client uses to join the room.
+- `NEXT_PUBLIC_APP_URL` — public; base URL for OG/SEO; used in JSON-LD schema generation.
 
 Path alias: `@/*` → `src/*`
+
+### Vector Embeddings & Semantic Search
+
+**How it works:**
+1. When a course is created or updated (titulo/descripcion/category changes), a trigger fires (`courses_insert_embedding` / `courses_update_embedding`)
+2. Trigger calls `queue_embedding_job()` which inserts a job into `embedding_jobs` table and calls Edge Function `generate-embedding`
+3. Edge Function generates embedding using Supabase.ai `gte-small` model (384-dim vector), stores in `courses.embedding`
+4. Job tracks status: pending → processing → completed (or failed with retry tracking)
+
+**Search endpoint** (`POST /api/courses/search`):
+- Body: `{ query: string, limit?: number }`
+- Calls Edge Function `generate-query-embedding` to embed the query
+- Uses RPC `search_courses_by_embedding()` for vector similarity (public; only returns published courses)
+- Fallback: text search (LIKE on titulo/descripcion) if embedding generation fails
+- Returns: `{ data: courses, count: number, search_type: 'vector' | 'text' }`
+
+**Key files:**
+- Migrations: `0006_add_embeddings.sql` (jobs table + triggers), `0007_search_function.sql` (RPC functions)
+- Edge Functions: `supabase/functions/generate-embedding/` (async job processor), `generate-query-embedding/` (query embedding)
+- Search component: `src/components/SearchCourses.tsx` (client; debounced search with inline feedback)
+- API: `src/app/api/courses/search/route.ts` (orchestrates Edge Function + RPC)
+
+### Agente de voz Edy (LiveKit)
+
+Widget conversacional (voz + texto) embebido vía iframe. Conecta el navegador al agente Python externo ([edy-agent](https://github.com/jeffersonquispe/edy-agent)) a través de una sala LiveKit compartida.
+
+- `src/app/api/livekit/token/route.ts` — firma tokens (auth opcional; incluye `student_id` si hay sesión).
+- `src/app/agente-edy/` — cliente LiveKit (`EdyRoom.tsx`): micrófono, chat de texto (`sendText` topic `lk.chat`) y transcripción.
+- `src/components/EdyWidget.tsx` — burbuja flotante global montada en `layout.tsx`; abre `/agente-edy` en un iframe de forma lazy.
+- Requiere que el agente Python corra contra el mismo proyecto LiveKit y cubra rooms `edy-*`. El soporte de texto requiere habilitar el text-stream `lk.chat` en el agente.
+
+### SEO & Accessibility Improvements
+
+**Course detail page** (`src/app/courses/[id]/page.tsx`):
+- JSON-LD structured data (`Course` schema with `AggregateRating`, `Offer`, instructor/provider info)
+- Semantic HTML: breadcrumb nav, `<section>` landmarks with `aria-labelledby`, lesson list as `<ol aria-label>`
+- Alt text on course images: `alt={Course title}` for discovery + accessibility
+- SR-only content (`.sr-only` class): star ratings, enrollment status labels
+- Metadata generation: page title, description (truncated to 155 chars), OG tags via Next.js `generateMetadata()`
+- Missing alt on lesson links in locked state (accessibility guidance: add `aria-label` if icon-only)
