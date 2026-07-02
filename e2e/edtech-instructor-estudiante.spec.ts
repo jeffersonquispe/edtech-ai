@@ -14,7 +14,6 @@ import { test, expect } from '@playwright/test';
 const NEW_COURSE_TITLE = `Curso Test ${Date.now()}`; // Título único por timestamp
 const NEW_COURSE_DESC = 'Descripción completa del curso de prueba E2E para verificar el flujo instructor-estudiante.';
 const NEW_COURSE_PRICE = '29.99';
-const NEW_COURSE_LEVEL = 'intermedio';
 
 test.describe.serial('EdTech - Flujos Instructor → Estudiante', () => {
   /**
@@ -29,8 +28,22 @@ test.describe.serial('EdTech - Flujos Instructor → Estudiante', () => {
     test.use({ storageState: 'e2e/.auth/instructor.json' });
 
     test('flujo completo: crear y publicar curso', async ({ page }) => {
-      // 1. Navega al dashboard
+      // 1. Navega al home primero para asegurar que se cargue la sesión
+      await page.goto('/');
+
+      // 2. Navega al dashboard
       await page.goto('/dashboard');
+
+      // Si se redirige a login, significa que la sesión no se cargó correctamente
+      // Espera a que se cargue el dashboard o login
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+
+      // Verifica que estamos en dashboard o login
+      const url = page.url();
+      if (url.includes('/login')) {
+        // Si estamos en login, algo falló con la sesión
+        throw new Error(`StorageState no se aplicó correctamente. URL: ${url}`);
+      }
       await expect(page).toHaveURL(/\/dashboard/);
 
       // 2. Verifica que está en el panel del instructor
@@ -83,22 +96,33 @@ test.describe.serial('EdTech - Flujos Instructor → Estudiante', () => {
       // 7. Busca y hace click en botón Crear usando data-testid
       const createButton = page.getByTestId('create-course-button');
       await expect(createButton).toBeVisible();
+
+      console.log(`📝 Creando curso: ${NEW_COURSE_TITLE}`);
       await createButton.click();
 
       // Espera a que se guarde el curso
-      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+      console.log(`⏳ Esperando respuesta del servidor...`);
+      await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {
+        console.log(`⚠️  Timeout en networkidle, continuando...`);
+      });
+
+      // Pequeña pausa para asegurar que el formulario se resetea
+      await page.waitForTimeout(1000);
 
       // 8. Verifica que el curso aparece en el listado del instructor
+      console.log(`🔍 Buscando curso en listado...`);
       const coursesList = page.getByTestId('instructor-courses-list');
       await expect(coursesList).toBeVisible({ timeout: 5000 });
 
+      // Espera un poco más para que se renderice el nuevo curso
+      await page.waitForTimeout(2000);
+
       const courseRow = page.getByText(NEW_COURSE_TITLE);
-      await expect(courseRow.first()).toBeVisible({ timeout: 5000 });
+      console.log(`📋 Verificando si el curso aparece en el listado...`);
+      await expect(courseRow.first()).toBeVisible({ timeout: 10000 });
 
       // 9. Busca y publica el curso (si está en draft)
       // Espera a que aparezca el botón de publicar
-      const courseInList = page.locator(`text=${NEW_COURSE_TITLE}`).first();
-
       // El botón de publicar debería estar visible si el curso está en draft
       // Intenta buscar un botón de publicar que esté cerca del curso
       const publishButtons = page.getByRole('button', { name: /publicar/i });

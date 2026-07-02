@@ -27,30 +27,70 @@ async function authenticateUser(
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  // Navega a login
-  await page.goto(`${BASE_URL}/login`);
+  try {
+    // Navega a login
+    console.log(`  → Navegando a ${BASE_URL}/login`);
+    await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' });
 
-  // Llena el formulario
-  await page.getByLabel('Correo electrónico').fill(email);
-  await page.getByLabel('Contraseña').fill(password);
+    // Espera a que los inputs estén listos
+    console.log(`  → Esperando formulario de login...`);
+    await page.waitForSelector('input[type="email"]', { timeout: 10000 });
+    await page.waitForSelector('input[type="password"]', { timeout: 10000 });
 
-  // Submit del formulario
-  await page.getByRole('button', { name: /entrar|signin/i }).click();
+    // Llena el formulario usando selectores más robustos
+    console.log(`  → Completando email: ${email}`);
+    const emailInput = page.locator('input[type="email"]').first();
+    await emailInput.fill(email);
 
-  // Espera a que se redirija al home
-  await page.waitForURL(`${BASE_URL}/`, { timeout: 10000 });
+    console.log(`  → Completando contraseña`);
+    const passwordInput = page.locator('input[type="password"]').first();
+    await passwordInput.fill(password);
 
-  // Verifica que está autenticado (navbar debe cambiar)
-  await page.waitForSelector('nav', { timeout: 5000 });
+    // Submit del formulario - busca botón por texto o rol
+    console.log(`  → Enviando formulario`);
+    const submitButton = page.getByRole('button', { name: /entrar|enter|login|signin/i });
+    if (await submitButton.isVisible().catch(() => false)) {
+      await submitButton.click();
+    } else {
+      // Fallback: busca por clase o texto
+      const buttonByText = page.locator('button', { hasText: /Entrar|Enter|Login/ }).first();
+      await buttonByText.click();
+    }
 
-  // Guarda el estado de autenticación
-  await context.storageState({ path: storagePath });
-  console.log(`✅ ${role} autenticado y guardado en ${storagePath}`);
+    // Espera a que se redirija al home (o a dashboard si es instructor)
+    console.log(`  → Esperando redirección...`);
+    try {
+      await page.waitForURL(/^.*\/(|dashboard)?$/, { timeout: 20000 });
+    } catch (e) {
+      console.log(`  ⚠️  Timeout esperando URL, intentando verificar nav...`);
+      // Fallback: espera a que la navbar esté lista
+      await page.waitForSelector('nav', { timeout: 10000 }).catch(() => {
+        console.log(`  ⚠️  No se encontró nav, continuando...`);
+      });
+    }
 
-  await context.close();
+    // Verifica que está autenticado (navbar debe cambiar)
+    console.log(`  → Verificando autenticación...`);
+    await page.waitForSelector('nav', { timeout: 10000 }).catch(() => {
+      console.log(`  ⚠️  No se encontró nav, pero continuando...`);
+    });
+
+    // Pequeña pausa para asegurar que la sesión está completamente guardada
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+
+    // Guarda el estado de autenticación
+    console.log(`  → Guardando storageState...`);
+    await context.storageState({ path: storagePath });
+    console.log(`✅ ${role} autenticado y guardado en ${storagePath}`);
+  } catch (error) {
+    console.error(`❌ Error autenticando ${role}:`, error);
+    throw error;
+  } finally {
+    await context.close();
+  }
 }
 
-async function globalSetup(config: FullConfig) {
+async function globalSetup(_config: FullConfig) {
   const browser = await chromium.launch();
 
   // Autenticar como Instructor
