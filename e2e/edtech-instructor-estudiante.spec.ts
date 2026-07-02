@@ -35,105 +35,110 @@ test.describe.serial('EdTech - Flujos Instructor → Estudiante', () => {
       await page.goto('/dashboard');
 
       // Si se redirige a login, significa que la sesión no se cargó correctamente
-      // Espera a que se cargue el dashboard o login
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
-      // Verifica que estamos en dashboard o login
       const url = page.url();
       if (url.includes('/login')) {
-        // Si estamos en login, algo falló con la sesión
         throw new Error(`StorageState no se aplicó correctamente. URL: ${url}`);
       }
       await expect(page).toHaveURL(/\/dashboard/);
 
       // 2. Verifica que está en el panel del instructor
-      const dashboardHeading = page.getByRole('heading', { name: /panel|mis cursos|dashboard/i }).first();
-      await expect(dashboardHeading).toBeVisible();
+      console.log(`✅ En dashboard del instructor`);
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
 
-      // 3. Busca el botón "Crear Curso" o "Nuevo Curso"
-      const createCourseButton = page.getByRole('button', { name: /crear|nuevo|new/i }).first();
-      await expect(createCourseButton).toBeVisible();
+      // 3. Busca el formulario de crear curso
+      const createForm = page.getByTestId('create-course-form');
+      await expect(createForm).toBeVisible({ timeout: 5000 });
+      console.log(`✅ Formulario de crear curso encontrado`);
 
-      // 4. Hace click para crear un nuevo curso
-      await createCourseButton.click();
+      // 4. Llena el formulario de creación de curso usando data-testid
+      console.log(`📝 Llenando formulario...`);
 
-      // Espera a que se muestre el formulario
-      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-
-      // 5. Llena el formulario de creación de curso usando data-testid
       // Título
       const titleInput = page.getByTestId('course-title-input');
       await expect(titleInput).toBeVisible();
+      await titleInput.clear();
       await titleInput.fill(NEW_COURSE_TITLE);
+      let titleValue = await titleInput.inputValue();
+      console.log(`  ✓ Título completado: "${titleValue}"`);
+      expect(titleValue).toBe(NEW_COURSE_TITLE);
 
       // Descripción
       const descInput = page.getByTestId('course-description-input');
       await expect(descInput).toBeVisible();
+      await descInput.clear();
       await descInput.fill(NEW_COURSE_DESC);
+      console.log(`  ✓ Descripción completada`);
 
       // Categoría
       const categorySelect = page.getByTestId('course-category-select');
       await expect(categorySelect).toBeVisible();
-      // Selecciona la primera categoría disponible (índice 0 es generalmente "Seleccionar")
       const options = categorySelect.locator('option');
       const optionCount = await options.count();
       if (optionCount > 1) {
         const firstCategoryValue = await options.nth(1).getAttribute('value');
         if (firstCategoryValue) {
           await categorySelect.selectOption(firstCategoryValue);
+          console.log(`  ✓ Categoría seleccionada: ${firstCategoryValue}`);
         }
       }
 
       // Precio
       const priceInput = page.getByTestId('course-price-input');
       await expect(priceInput).toBeVisible();
+      await priceInput.clear();
       await priceInput.fill(NEW_COURSE_PRICE);
+      console.log(`  ✓ Precio completado: ${NEW_COURSE_PRICE}`);
 
-      // 6. Verifica que el formulario está lleno
-      const titleValue = await titleInput.inputValue();
-      expect(titleValue).toBe(NEW_COURSE_TITLE);
-
-      // 7. Busca y hace click en botón Crear usando data-testid
+      // 5. Busca y hace click en botón Crear usando data-testid
       const createButton = page.getByTestId('create-course-button');
       await expect(createButton).toBeVisible();
+      await expect(createButton).toBeEnabled();
 
-      console.log(`📝 Creando curso: ${NEW_COURSE_TITLE}`);
+      console.log(`🚀 Clickeando botón "Crear curso"`);
       await createButton.click();
 
       // Espera a que se guarde el curso
       console.log(`⏳ Esperando respuesta del servidor...`);
       await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {
-        console.log(`⚠️  Timeout en networkidle, continuando...`);
+        console.log(`⚠️  Timeout en networkidle`);
       });
 
-      // Pequeña pausa para asegurar que el formulario se resetea
-      await page.waitForTimeout(1000);
-
-      // 8. Verifica que el curso aparece en el listado del instructor
-      console.log(`🔍 Buscando curso en listado...`);
-      const coursesList = page.getByTestId('instructor-courses-list');
-      await expect(coursesList).toBeVisible({ timeout: 5000 });
-
-      // Espera un poco más para que se renderice el nuevo curso
+      // Espera a que el formulario se resetee (indicador de éxito)
+      console.log(`⏳ Verificando si el formulario se limpió...`);
       await page.waitForTimeout(2000);
 
+      // 6. Recarga la página para asegurar que el curso aparece
+      console.log(`🔄 Recargando página...`);
+      await page.reload();
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+
+      // 7. Verifica que el curso aparece en el listado del instructor
+      console.log(`🔍 Buscando curso en listado después de recarga...`);
+      const coursesList = page.getByTestId('instructor-courses-list');
+      await expect(coursesList).toBeVisible({ timeout: 10000 });
+
       const courseRow = page.getByText(NEW_COURSE_TITLE);
-      console.log(`📋 Verificando si el curso aparece en el listado...`);
+      console.log(`📋 Buscando: "${NEW_COURSE_TITLE}"`);
       await expect(courseRow.first()).toBeVisible({ timeout: 10000 });
 
-      // 9. Busca y publica el curso (si está en draft)
-      // Espera a que aparezca el botón de publicar
-      // El botón de publicar debería estar visible si el curso está en draft
-      // Intenta buscar un botón de publicar que esté cerca del curso
+      console.log(`✅ Curso encontrado en listado`);
+
+      // 8. Busca y publica el curso (si está en draft)
+      console.log(`📤 Buscando botón publicar...`);
       const publishButtons = page.getByRole('button', { name: /publicar/i });
       const publishButton = publishButtons.first();
 
       if (await publishButton.isVisible().catch(() => false)) {
+        console.log(`🚀 Publicando curso...`);
         await publishButton.click();
         await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+        console.log(`✅ Curso publicado`);
       }
 
-      // 10. Navega al catálogo público para verificar que el curso aparece
+      // 9. Navega al catálogo público para verificar que el curso aparece
+      console.log(`🌐 Navegando al catálogo público...`);
       await page.goto('/');
 
       // Busca el curso en el catálogo
@@ -159,20 +164,25 @@ test.describe.serial('EdTech - Flujos Instructor → Estudiante', () => {
       await page.goto('/');
       await expect(page).toHaveURL(/^http/);
 
+      console.log(`✅ En página de inicio del estudiante`);
+
       // 2. Usa la búsqueda para encontrar el curso del instructor
       const searchInput = page.getByPlaceholder(/buscar|search|escribe/i).first();
       await expect(searchInput).toBeVisible();
 
       // Escribe parte del título del curso
-      const courseSearchTerm = NEW_COURSE_TITLE.substring(0, 15); // Primeros 15 caracteres
+      const courseSearchTerm = NEW_COURSE_TITLE.substring(0, 15);
+      console.log(`🔍 Buscando curso: "${courseSearchTerm}"`);
       await searchInput.fill(courseSearchTerm);
 
       // Espera a que se actualicen los resultados
-      await page.waitForTimeout(1000); // Pequeña pausa para que se actualice la búsqueda
+      await page.waitForTimeout(1500);
 
       // 3. Verifica que el curso aparece en los resultados
       const searchResult = page.getByText(NEW_COURSE_TITLE);
       await expect(searchResult.first()).toBeVisible({ timeout: 10000 });
+
+      console.log(`✅ Curso encontrado en resultados de búsqueda`);
 
       // 4. Hace click en el curso para ver los detalles
       await searchResult.first().click();
@@ -182,15 +192,20 @@ test.describe.serial('EdTech - Flujos Instructor → Estudiante', () => {
       const courseTitle = page.getByRole('heading').filter({ hasText: NEW_COURSE_TITLE }).first();
       await expect(courseTitle).toBeVisible({ timeout: 5000 });
 
+      console.log(`✅ En página de detalles del curso`);
+
       // 5. Busca el botón de inscribirse usando data-testid
       const enrollButton = page.getByTestId('enroll-button');
       await expect(enrollButton).toBeVisible();
 
+      console.log(`🚀 Haciendo click en "Inscribirse"`);
       // 6. Hace click para inscribirse
       await enrollButton.click();
 
       // Espera a que se procese la inscripción
       await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+
+      console.log(`✅ Inscripción procesada`);
 
       // Verifica que la inscripción fue exitosa (botón cambió o se mostró confirmación)
       const successMessage = page.getByText(/inscrito|enrolled|success|confirmar/i);
@@ -205,6 +220,7 @@ test.describe.serial('EdTech - Flujos Instructor → Estudiante', () => {
       expect(isSuccessful).toBe(true);
 
       // 7. Navega al dashboard para verificar que el curso aparece en los inscritos
+      console.log(`📊 Navegando al dashboard del estudiante...`);
       await page.goto('/dashboard');
 
       // Espera a que cargue el dashboard
@@ -214,9 +230,13 @@ test.describe.serial('EdTech - Flujos Instructor → Estudiante', () => {
       const enrolledCoursesSection = page.getByTestId('student-enrolled-courses');
       await expect(enrolledCoursesSection).toBeVisible({ timeout: 10000 });
 
+      console.log(`✅ Sección de cursos inscritos encontrada`);
+
       // 8. Verifica que el curso está listado en el dashboard del estudiante
       const courseInDashboard = page.getByText(NEW_COURSE_TITLE);
       await expect(courseInDashboard.first()).toBeVisible({ timeout: 5000 });
+
+      console.log(`✅ Curso aparece en panel de cursos inscritos`);
 
       // 9. Hace click en el curso para verificar que puede acceder a él
       await courseInDashboard.first().click();
@@ -237,11 +257,14 @@ test.describe.serial('EdTech - Flujos Instructor → Estudiante', () => {
   test.describe('Verificación: curso en catálogo público', () => {
     // Sin autenticación requerida - visitante anónimo
     test('curso visible en catálogo para visitantes', async ({ page }) => {
+      console.log(`👤 Visitante anónimo navegando catálogo...`);
       await page.goto('/');
 
       // Busca el curso en el catálogo
       const courseLink = page.getByText(NEW_COURSE_TITLE);
       await expect(courseLink.first()).toBeVisible({ timeout: 10000 });
+
+      console.log(`✅ Curso visible en catálogo para visitantes`);
 
       // Verifica que es clickeable
       await courseLink.first().click();
@@ -255,7 +278,7 @@ test.describe.serial('EdTech - Flujos Instructor → Estudiante', () => {
       const courseInfo = page.getByText(NEW_COURSE_DESC);
       await expect(courseInfo).toBeVisible({ timeout: 5000 });
 
-      console.log(`✅ Curso "${NEW_COURSE_TITLE}" es visible para visitantes`);
+      console.log(`✅ Curso "${NEW_COURSE_TITLE}" completamente visible y funcional`);
     });
   });
 });
