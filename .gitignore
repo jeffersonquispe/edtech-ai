@@ -6,6 +6,7 @@ out
 *.log
 .DS_Store
 coverage
+*.tsbuildinfo
 
 # Playwright
 /test-results/
@@ -13,3 +14,5 @@ coverage
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+/e2e/.auth/
+/e2e/errors/

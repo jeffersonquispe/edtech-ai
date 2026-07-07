@@ -125,17 +125,25 @@ test.describe.serial('EdTech - Flujos Instructor → Estudiante', () => {
 
       console.log(`✅ Curso encontrado en listado`);
 
-      // 8. Busca y publica el curso (si está en draft)
+      // 8. Busca y publica el curso (si está en draft) — se escopa a la card del curso
+      // creado para no publicar accidentalmente otro curso en borrador de una corrida previa.
       console.log(`📤 Buscando botón publicar...`);
-      const publishButtons = page.getByRole('button', { name: /publicar/i });
-      const publishButton = publishButtons.first();
+      const courseCard = page.locator('[data-testid^="course-card-"]').filter({ hasText: NEW_COURSE_TITLE });
+      const publishButton = courseCard.getByRole('button', { name: /publicar/i });
 
       if (await publishButton.isVisible().catch(() => false)) {
         console.log(`🚀 Publicando curso...`);
         await publishButton.click();
         await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
         console.log(`✅ Curso publicado`);
+      } else {
+        console.log(`⚠️ No se encontró botón publicar visible para este curso (¿ya estaba publicado?)`);
       }
+
+      await page.reload();
+      await page.waitForLoadState('networkidle');
+      const badgeText = await courseCard.locator('.badge').textContent().catch(() => '(no encontrado)');
+      console.log(`🏷️ Estado del curso tras publicar (recargado): ${badgeText}`);
 
       // 9. Navega al catálogo público para verificar que el curso aparece
       console.log(`🌐 Navegando al catálogo público...`);
@@ -207,17 +215,9 @@ test.describe.serial('EdTech - Flujos Instructor → Estudiante', () => {
 
       console.log(`✅ Inscripción procesada`);
 
-      // Verifica que la inscripción fue exitosa (botón cambió o se mostró confirmación)
-      const successMessage = page.getByText(/inscrito|enrolled|success|confirmar/i);
-      const enrolledBadge = page.getByText(/ya estás inscrito|already enrolled|inscripción confirmada/i);
-
-      const isSuccessful = await Promise.race([
-        successMessage.first().isVisible().catch(() => false),
-        enrolledBadge.first().isVisible().catch(() => false),
-        page.waitForURL(/dashboard/, { timeout: 5000 }).then(() => true).catch(() => false)
-      ]);
-
-      expect(isSuccessful).toBe(true);
+      // Tras inscribirse, el EnrollButton llama a router.refresh() y desaparece
+      // (el server component recalcula `enrolled` y ya no lo renderiza).
+      await expect(enrollButton).toBeHidden({ timeout: 10000 });
 
       // 7. Navega al dashboard para verificar que el curso aparece en los inscritos
       console.log(`📊 Navegando al dashboard del estudiante...`);

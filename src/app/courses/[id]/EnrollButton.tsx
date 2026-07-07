@@ -20,6 +20,7 @@ export default function EnrollButton({ courseId, enrolled, isLoggedIn, courseTit
 
     try {
       await enrollCourse(courseId);
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al inscribirse');
     } finally {

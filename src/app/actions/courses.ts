@@ -225,6 +225,7 @@ export async function publishCourse(courseId: string) {
 
   revalidatePath('/dashboard');
   revalidatePath(`/courses/${courseId}`);
+  revalidatePath('/');
   return data;
 }
 

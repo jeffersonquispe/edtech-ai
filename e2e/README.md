@@ -21,13 +21,13 @@ e2e/
 ### 1. Usuarios de Prueba
 
 **Instructor:**
-- Email: `magis.ai.good@gmail.com`
-- Contraseña: `123456`
+- Email: ``
+- Contraseña: ``
 - Rol: Instructor (puede crear y publicar cursos)
 
 **Estudiante:**
-- Email: `jeffersonquispep@gmail.com`
-- Contraseña: `123456`
+- Email: ``
+- Contraseña: ``
 - Rol: Estudiante (puede inscribirse en cursos)
 
 ### 2. Global Setup

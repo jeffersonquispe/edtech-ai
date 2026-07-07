@@ -186,6 +186,7 @@ export default function CourseOptions({
               name="precio"
               type="number"
               min={0}
+              step="0.01"
               defaultValue={precio}
               style={{
                 width: '100%',

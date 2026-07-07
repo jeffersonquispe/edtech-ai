@@ -27,6 +27,39 @@ export default async function Dashboard() {
 
   const isInstructor = profile?.rol === 'instructor';
 
+  const enrolledCourseIds = (enrolledCourses ?? [])
+    .map((e: any) => e.courses?.id)
+    .filter(Boolean);
+
+  const progressByCourse: Record<string, { completed: number; total: number }> = {};
+  if (!isInstructor && enrolledCourseIds.length > 0) {
+    const { data: allLessons } = await supabase
+      .from('lessons')
+      .select('id, course_id')
+      .in('course_id', enrolledCourseIds);
+
+    for (const cid of enrolledCourseIds) progressByCourse[cid] = { completed: 0, total: 0 };
+    const lessonCourseMap: Record<string, string> = {};
+    for (const l of allLessons ?? []) {
+      lessonCourseMap[l.id] = l.course_id;
+      if (progressByCourse[l.course_id]) progressByCourse[l.course_id].total += 1;
+    }
+
+    const lessonIds = Object.keys(lessonCourseMap);
+    if (lessonIds.length > 0) {
+      const { data: completions } = await supabase
+        .from('lesson_completions')
+        .select('lesson_id')
+        .eq('student_id', user.id)
+        .in('lesson_id', lessonIds);
+
+      for (const c of completions ?? []) {
+        const cid = lessonCourseMap[c.lesson_id];
+        if (cid && progressByCourse[cid]) progressByCourse[cid].completed += 1;
+      }
+    }
+  }
+
   return (
     <div className="container">
       <h1 style={{ fontSize: '1.4rem', marginBottom: 28 }}>Mi panel</h1>
@@ -98,6 +131,11 @@ export default async function Dashboard() {
             <div className="grid" style={{ marginBottom: 32 }} data-testid="student-enrolled-courses">
               {enrolledCourses.map((enrollment: any) => {
                 const c = enrollment.courses;
+                const progress = progressByCourse[c.id];
+                const percent = progress && progress.total > 0
+                  ? Math.round((progress.completed / progress.total) * 100)
+                  : 0;
+                const isComplete = progress && progress.total > 0 && percent === 100;
                 return (
                   <div key={c.id} className="card course-card" data-testid={`enrolled-course-${c.id}`}>
                     <a href={`/courses/${c.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -106,8 +144,29 @@ export default async function Dashboard() {
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-sm)' }}>
                         <span style={{ fontSize: 'var(--text-utility)', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>{c.categories?.nombre}</span>
+                        {isComplete && (
+                          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase' }}>
+                            Completado
+                          </span>
+                        )}
                       </div>
                       <h3>{c.titulo}</h3>
+                      {progress && progress.total > 0 && (
+                        <div style={{ marginTop: 'var(--space-sm)' }} role="status">
+                          <div style={{ height: 6, borderRadius: 3, background: '#e5e7eb', overflow: 'hidden', marginBottom: 4 }}>
+                            <div
+                              style={{
+                                height: '100%',
+                                width: `${percent}%`,
+                                background: isComplete ? '#16a34a' : '#3b82f6',
+                              }}
+                            />
+                          </div>
+                          <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                            {progress.completed} de {progress.total} lecciones — {percent}%
+                          </span>
+                        </div>
+                      )}
                       <div className="price" style={{ marginTop: 'var(--space-sm)' }}>{c.precio === 0 ? 'Gratis' : `S/ ${c.precio}`}</div>
                     </a>
                   </div>

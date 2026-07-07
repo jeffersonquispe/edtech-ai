@@ -43,7 +43,7 @@ export default function CreateCourseForm({ categories }: { categories: Category[
       </div>
       <div className="form-group">
         <label>Precio (S/)</label>
-        <input name="precio" type="number" min={0} defaultValue={0} data-testid="course-price-input" />
+        <input name="precio" type="number" min={0} step="0.01" defaultValue={0} data-testid="course-price-input" />
       </div>
       {error && <p className="error-msg">{error}</p>}
       <button className="btn btn-primary" disabled={loading} data-testid="create-course-button">{loading ? 'Creando...' : 'Crear curso (borrador)'}</button>

@@ -53,6 +53,7 @@ export default async function CoursePage({ params }: Props) {
   let enrolled = false;
   let isInstructor = false;
   let isOwner = false;
+  let completedLessonIds = new Set<string>();
 
   if (user) {
     const { data: profile } = await supabase
@@ -71,7 +72,19 @@ export default async function CoursePage({ params }: Props) {
         .maybeSingle();
       enrolled = !!enr;
     }
+    if (enrolled && lessons && lessons.length > 0) {
+      const { data: completions } = await supabase
+        .from('lesson_completions')
+        .select('lesson_id')
+        .eq('student_id', user.id)
+        .in('lesson_id', lessons.map((l) => l.id));
+      completedLessonIds = new Set((completions ?? []).map((c) => c.lesson_id));
+    }
   }
+
+  const totalLessons = lessons?.length ?? 0;
+  const completedCount = completedLessonIds.size;
+  const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
 
   const avgRating =
     reviews && reviews.length > 0
@@ -192,6 +205,28 @@ export default async function CoursePage({ params }: Props) {
                 Contenido del curso
               </h2>
 
+              {enrolled && totalLessons > 0 && (
+                <div style={{ marginBottom: 16 }} role="status">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: '0.85rem', color: '#374151' }}>
+                    <span>
+                      {progressPercent === 100
+                        ? '100% completado'
+                        : `${completedCount} de ${totalLessons} lecciones — ${progressPercent}%`}
+                    </span>
+                  </div>
+                  <div style={{ height: 8, borderRadius: 4, background: '#e5e7eb', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        height: '100%',
+                        width: `${progressPercent}%`,
+                        background: progressPercent === 100 ? '#16a34a' : '#3b82f6',
+                        transition: 'width 0.2s ease',
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
               {!lessons || lessons.length === 0 ? (
                 <p style={{ color: '#6b7280' }}>Aún no hay lecciones.</p>
               ) : (
@@ -220,9 +255,22 @@ export default async function CoursePage({ params }: Props) {
                       </span>
 
                       {enrolled ? (
-                        <a href={`/lessons/${l.id}`}>
-                          {`Lección ${i + 1}: ${l.titulo}`}
-                        </a>
+                        <>
+                          <a href={`/lessons/${l.id}`}>
+                            {`Lección ${i + 1}: ${l.titulo}`}
+                          </a>
+                          {completedLessonIds.has(l.id) && (
+                            <span
+                              style={{ marginLeft: 'auto', color: '#16a34a', fontSize: '0.9rem' }}
+                              aria-hidden="true"
+                            >
+                              ✓
+                            </span>
+                          )}
+                          {completedLessonIds.has(l.id) && (
+                            <span className="sr-only">(completada)</span>
+                          )}
+                        </>
                       ) : (
                         <>
                           <span style={{ color: '#374151' }}>{l.titulo}</span>

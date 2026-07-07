@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
+import LessonCompleteButton from './LessonCompleteButton';
 
 export default async function LessonPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -7,10 +8,11 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: lesson }, { data: course }, { data: profile }] = await Promise.all([
+  const [{ data: lesson }, { data: profile }] = await Promise.all([
     supabase.from('lessons').select('*, courses(id, titulo, instructor_id)').eq('id', id).maybeSingle(),
-    null,
-    user ? supabase.from('profiles').select('rol').eq('id', user.id).maybeSingle() : null,
+    user
+      ? supabase.from('profiles').select('rol').eq('id', user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   if (!lesson) notFound();
@@ -32,6 +34,17 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
 
   if (!isOwner && !isEnrolled) {
     notFound();
+  }
+
+  let isCompleted = false;
+  if (user && isEnrolled) {
+    const { data: completion } = await supabase
+      .from('lesson_completions')
+      .select('lesson_id')
+      .eq('student_id', user.id)
+      .eq('lesson_id', id)
+      .maybeSingle();
+    isCompleted = !!completion;
   }
 
   // Get all lessons in course for navigation
@@ -66,6 +79,10 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
             <p style={{ color: '#6b7280', fontStyle: 'italic' }}>Esta lección aún no tiene contenido.</p>
           )}
         </div>
+
+        {isEnrolled && !isOwner && (
+          <LessonCompleteButton lessonId={id} completed={isCompleted} />
+        )}
 
         {/* Navigation */}
         {(prevLesson || nextLesson) && (
