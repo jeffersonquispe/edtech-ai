@@ -10,7 +10,8 @@ export default async function Home() {
       .from('courses')
       .select('id, titulo, descripcion, precio, categories(nombre, slug)')
       .eq('estado', 'published')
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .limit(24),
     supabase
       .from('categories')
       .select('id, nombre, slug')

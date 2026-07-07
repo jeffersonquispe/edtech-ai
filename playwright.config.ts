@@ -15,6 +15,7 @@ export default defineConfig({
   testDir: './e2e',
   /* Global setup para autenticación */
   globalSetup: require.resolve('./e2e/global-setup.ts'),
+  globalTeardown: require.resolve('./e2e/global-teardown.ts'),
   /* Run tests in files in parallel */
   fullyParallel: false, // Sequential para flujos dependientes
   /* Fail the build on CI if you accidentally left test.only in the source code. */
