@@ -17,6 +17,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 24 }
+      - name: Check required secrets are present
+        run: |
+          if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ]; then echo "::error::NEXT_PUBLIC_SUPABASE_URL is missing/empty"; else echo "NEXT_PUBLIC_SUPABASE_URL OK (len=${#NEXT_PUBLIC_SUPABASE_URL})"; fi
+          if [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ]; then echo "::error::NEXT_PUBLIC_SUPABASE_ANON_KEY is missing/empty"; else echo "NEXT_PUBLIC_SUPABASE_ANON_KEY OK (len=${#NEXT_PUBLIC_SUPABASE_ANON_KEY})"; fi
+          if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] || [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ]; then exit 1; fi
       - run: npm ci
       - run: npm run lint                    # gate 1
       - run: npm run test:run                # gate 2 (Vitest)
