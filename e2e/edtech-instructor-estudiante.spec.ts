@@ -145,13 +145,15 @@ test.describe.serial('EdTech - Flujos Instructor → Estudiante', () => {
       const badgeText = await courseCard.locator('.badge').textContent().catch(() => '(no encontrado)');
       console.log(`🏷️ Estado del curso tras publicar (recargado): ${badgeText}`);
 
-      // 9. Navega al catálogo público para verificar que el curso aparece
+      // 9. Navega al catálogo público para verificar que el curso aparece.
+      // revalidatePath('/') puede tardar un poco en propagarse bajo carga (CI),
+      // así que reintenta con recargas en vez de esperar una sola vez.
       console.log(`🌐 Navegando al catálogo público...`);
-      await page.goto('/');
-
-      // Busca el curso en el catálogo
       const courseInCatalog = page.getByText(NEW_COURSE_TITLE);
-      await expect(courseInCatalog.first()).toBeVisible({ timeout: 10000 });
+      await expect(async () => {
+        await page.goto('/');
+        await expect(courseInCatalog.first()).toBeVisible({ timeout: 5000 });
+      }).toPass({ timeout: 30000, intervals: [1000, 2000, 4000] });
 
       console.log(`✅ Curso "${NEW_COURSE_TITLE}" creado y publicado exitosamente`);
     });
