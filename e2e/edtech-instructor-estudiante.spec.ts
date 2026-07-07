@@ -134,16 +134,22 @@ test.describe.serial('EdTech - Flujos Instructor → Estudiante', () => {
       if (await publishButton.isVisible().catch(() => false)) {
         console.log(`🚀 Publicando curso...`);
         await publishButton.click();
-        await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-        console.log(`✅ Curso publicado`);
+
+        // No confiar en networkidle: la server action puede tardar más de lo
+        // que networkidle espera. Verifica el estado real recargando hasta que
+        // el badge diga "published" (o falla explícitamente si nunca ocurre,
+        // en vez de fallar 30s después en un locator sin relación aparente).
+        await expect(async () => {
+          await page.reload();
+          await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+          const badgeText = await courseCard.locator('.badge').textContent().catch(() => null);
+          expect(badgeText).toBe('published');
+        }).toPass({ timeout: 20000, intervals: [1000, 2000, 4000] });
+
+        console.log(`✅ Curso publicado (badge confirma estado "published")`);
       } else {
         console.log(`⚠️ No se encontró botón publicar visible para este curso (¿ya estaba publicado?)`);
       }
-
-      await page.reload();
-      await page.waitForLoadState('networkidle');
-      const badgeText = await courseCard.locator('.badge').textContent().catch(() => '(no encontrado)');
-      console.log(`🏷️ Estado del curso tras publicar (recargado): ${badgeText}`);
 
       // 9. Navega al catálogo público para verificar que el curso aparece.
       // revalidatePath('/') puede tardar un poco en propagarse bajo carga (CI),
