@@ -4,6 +4,26 @@ import CreateCourseForm from './CreateCourseForm';
 import PublishButton from './PublishButton';
 import CourseOptions from './CourseOptions';
 import { getCourseImage } from '@/lib/courseImages';
+import Link from 'next/link';
+
+type CourseCategory = { nombre?: string; slug?: string } | null;
+type CourseEstado = 'draft' | 'published' | 'archived';
+type InstructorCourse = {
+  id: string;
+  titulo: string;
+  descripcion: string | null;
+  estado: CourseEstado;
+  precio: number;
+  category_id: string | null;
+  categories: CourseCategory;
+};
+type EnrolledCourse = {
+  id: string;
+  titulo: string;
+  precio: number;
+  estado: CourseEstado;
+  categories: CourseCategory;
+};
 
 export default async function Dashboard() {
   const supabase = await createClient();
@@ -27,9 +47,29 @@ export default async function Dashboard() {
 
   const isInstructor = profile?.rol === 'instructor';
 
-  const enrolledCourseIds = (enrolledCourses ?? [])
-    .map((e: any) => e.courses?.id)
-    .filter(Boolean);
+  // El cliente Supabase sin tipos generados infiere las relaciones embebidas
+  // (FK a un solo registro) como arreglos; las normalizamos a un solo objeto.
+  const normalizedCourses: InstructorCourse[] = (courses ?? []).map((c) => ({
+    ...c,
+    estado: c.estado as CourseEstado,
+    categories: Array.isArray(c.categories) ? c.categories[0] ?? null : c.categories,
+  }));
+
+  const normalizedEnrolledCourses: { courses: EnrolledCourse | null }[] = (enrolledCourses ?? []).map((e) => {
+    const rawCourse = Array.isArray(e.courses) ? e.courses[0] ?? null : e.courses;
+    if (!rawCourse) return { courses: null };
+    return {
+      courses: {
+        ...rawCourse,
+        estado: rawCourse.estado as CourseEstado,
+        categories: Array.isArray(rawCourse.categories) ? rawCourse.categories[0] ?? null : rawCourse.categories,
+      },
+    };
+  });
+
+  const enrolledCourseIds = normalizedEnrolledCourses
+    .map((e) => e.courses?.id)
+    .filter((id): id is string => Boolean(id));
 
   const progressByCourse: Record<string, { completed: number; total: number }> = {};
   if (!isInstructor && enrolledCourseIds.length > 0) {
@@ -67,9 +107,9 @@ export default async function Dashboard() {
       {isInstructor ? (
         <>
           <h2 style={{ fontSize: '1.1rem', marginBottom: 16 }}>Mis cursos</h2>
-          {courses && courses.length > 0 && (
+          {normalizedCourses.length > 0 && (
             <div style={{ marginBottom: 32 }} data-testid="instructor-courses-list">
-              {(courses as any[]).map(c => (
+              {normalizedCourses.map(c => (
                 <div key={c.id} className="card" style={{ marginBottom: 16, padding: '20px' }} data-testid={`course-card-${c.id}`}>
                   <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 16 }}>
                     {/* Thumbnail */}
@@ -85,7 +125,7 @@ export default async function Dashboard() {
                             <h3 style={{ marginBottom: 4 }}>{c.titulo}</h3>
                           </a>
                           <span style={{ fontSize: 'var(--text-utility)', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
-                            {(c.categories as any)?.nombre}
+                            {c.categories?.nombre}
                           </span>
                         </div>
                         <span className={`badge badge-${c.estado}`} style={{ whiteSpace: 'nowrap' }}>{c.estado}</span>
@@ -106,7 +146,7 @@ export default async function Dashboard() {
                           courseId={c.id}
                           titulo={c.titulo}
                           descripcion={c.descripcion}
-                          categoryId={c.category_id}
+                          categoryId={c.category_id ?? ''}
                           precio={c.precio}
                           estado={c.estado}
                           categories={categories ?? []}
@@ -127,10 +167,11 @@ export default async function Dashboard() {
       ) : (
         <>
           <h2 style={{ fontSize: '1.1rem', marginBottom: 16 }}>Mis inscripciones</h2>
-          {enrolledCourses && enrolledCourses.length > 0 ? (
+          {normalizedEnrolledCourses.length > 0 ? (
             <div className="grid" style={{ marginBottom: 32 }} data-testid="student-enrolled-courses">
-              {enrolledCourses.map((enrollment: any) => {
+              {normalizedEnrolledCourses.map((enrollment) => {
                 const c = enrollment.courses;
+                if (!c) return null;
                 const progress = progressByCourse[c.id];
                 const percent = progress && progress.total > 0
                   ? Math.round((progress.completed / progress.total) * 100)
@@ -175,7 +216,7 @@ export default async function Dashboard() {
             </div>
           ) : (
             <p style={{ color: '#6b7280' }}>
-              Aún no te has inscrito en ningún curso. Explora <a href="/">los cursos disponibles</a> e inscríbete en los que te interesen.
+              Aún no te has inscrito en ningún curso. Explora <Link href="/">los cursos disponibles</Link> e inscríbete en los que te interesen.
             </p>
           )}
         </>

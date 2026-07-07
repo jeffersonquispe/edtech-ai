@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import EnrollButton from './EnrollButton';
 import ReviewForm from './ReviewForm';
 import { getCourseImage } from '@/lib/courseImages';
@@ -19,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!course) return { title: 'Curso no encontrado | EdTech' };
 
-  const category = (course.categories as any)?.nombre ?? '';
+  const category = (course.categories as { nombre?: string } | null)?.nombre ?? '';
   return {
     title: `${course.titulo} | EdTech`,
     description: course.descripcion
@@ -88,11 +89,12 @@ export default async function CoursePage({ params }: Props) {
 
   const avgRating =
     reviews && reviews.length > 0
-      ? (reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length).toFixed(1)
+      ? (reviews.reduce((s: number, r: { rating: number }) => s + r.rating, 0) / reviews.length).toFixed(1)
       : null;
 
-  const categoryName = (course.categories as any)?.nombre ?? null;
-  const categorySlug = (course.categories as any)?.slug ?? categoryName ?? '';
+  const courseCategory = course.categories as { nombre?: string; slug?: string } | null;
+  const categoryName = courseCategory?.nombre ?? null;
+  const categorySlug = courseCategory?.slug ?? categoryName ?? '';
   const courseImageSrc = getCourseImage(course.titulo, categorySlug);
 
   const reviewCount = reviews?.length ?? 0;
@@ -131,9 +133,9 @@ export default async function CoursePage({ params }: Props) {
       <main className="container">
         {/* Breadcrumb */}
         <nav aria-label="Ruta de navegación">
-          <a href="/" style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+          <Link href="/" style={{ color: '#6b7280', fontSize: '0.875rem' }}>
             ← Volver al catálogo de cursos
-          </a>
+          </Link>
         </nav>
 
         <div
@@ -235,7 +237,7 @@ export default async function CoursePage({ params }: Props) {
                   style={{ padding: 0, overflow: 'hidden', listStyle: 'none', margin: 0 }}
                   aria-label="Lista de lecciones del curso"
                 >
-                  {(lessons as any[]).map((l, i) => (
+                  {lessons.map((l, i) => (
                     <li
                       key={l.id}
                       style={{
@@ -303,7 +305,7 @@ export default async function CoursePage({ params }: Props) {
                 <p style={{ color: '#6b7280' }}>Aún no hay reseñas.</p>
               ) : (
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                  {(reviews as any[]).map((r) => (
+                  {reviews.map((r) => (
                     <li key={r.id} className="review-item">
                       <div
                         style={{
@@ -321,7 +323,7 @@ export default async function CoursePage({ params }: Props) {
                           {r.rating} de 5 estrellas
                         </span>
                         <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                          {r.profiles?.nombre ?? 'Anónimo'}
+                          {(Array.isArray(r.profiles) ? r.profiles[0]?.nombre : undefined) ?? 'Anónimo'}
                         </span>
                       </div>
                       {r.texto && (

@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
@@ -29,15 +30,15 @@ export default function Navbar() {
 
   return (
     <nav className="nav">
-      <a href="/" className="nav-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+      <Link href="/" className="nav-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
         <span style={{ color: 'var(--color-neutral-900)' }}>EdTech</span>
         <span style={{ color: 'var(--color-indigo)' }}>Platform</span>
         <span style={{ width: '6px', height: '6px', backgroundColor: 'var(--color-sage)', borderRadius: '50%', boxShadow: '0 0 8px var(--color-sage)', display: 'inline-block' }} title="Plataforma activa"></span>
-      </a>
+      </Link>
       <div className="nav-links">
         {user ? (
           <>
-            <a href="/dashboard" style={{ fontWeight: 500 }}>Mis cursos</a>
+            <Link href="/dashboard" style={{ fontWeight: 500 }}>Mis cursos</Link>
             <span style={{ background: 'rgba(91, 79, 255, 0.08)', color: 'var(--color-indigo)', padding: '4px 12px', borderRadius: '99px', fontSize: '13px', fontWeight: 500 }}>
               {user.email}
             </span>
@@ -45,8 +46,8 @@ export default function Navbar() {
           </>
         ) : (
           <>
-            <a href="/login" style={{ fontWeight: 500, marginRight: 'var(--space-xs)' }}>Iniciar sesión</a>
-            <a href="/register" className="btn btn-primary" style={{ padding: '8px 16px' }}>Registrarse</a>
+            <Link href="/login" style={{ fontWeight: 500, marginRight: 'var(--space-xs)' }}>Iniciar sesión</Link>
+            <Link href="/register" className="btn btn-primary" style={{ padding: '8px 16px' }}>Registrarse</Link>
           </>
         )}
       </div>

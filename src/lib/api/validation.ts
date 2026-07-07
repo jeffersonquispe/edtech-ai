@@ -28,7 +28,7 @@ export function validateText(text: string | undefined, required = false): { vali
   return { valid: true };
 }
 
-export function validatePrice(price: any): { valid: boolean; error?: string } {
+export function validatePrice(price: unknown): { valid: boolean; error?: string } {
   const num = Number(price ?? 0);
   if (isNaN(num)) {
     return { valid: false, error: 'precio debe ser un número' };
@@ -42,7 +42,7 @@ export function validatePrice(price: any): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
-export function validateRating(rating: any): { valid: boolean; error?: string } {
+export function validateRating(rating: unknown): { valid: boolean; error?: string } {
   if (typeof rating !== 'number' || !Number.isInteger(rating)) {
     return { valid: false, error: 'rating debe ser un entero entre 1 y 5' };
   }
@@ -52,7 +52,7 @@ export function validateRating(rating: any): { valid: boolean; error?: string } 
   return { valid: true };
 }
 
-export function validatePosition(position: any): { valid: boolean; error?: string } {
+export function validatePosition(position: unknown): { valid: boolean; error?: string } {
   const pos = Number(position ?? 0);
   if (!Number.isInteger(pos)) {
     return { valid: false, error: 'position debe ser un entero' };

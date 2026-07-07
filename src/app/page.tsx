@@ -17,6 +17,13 @@ export default async function Home() {
       .order('nombre', { ascending: true })
   ]);
 
+  // El cliente Supabase sin tipos generados infiere las relaciones embebidas
+  // como arreglos; las normalizamos a un solo objeto para el componente cliente.
+  const normalizedCourses = (courses ?? []).map((c) => ({
+    ...c,
+    categories: Array.isArray(c.categories) ? c.categories[0] ?? null : c.categories,
+  }));
+
   return (
     <div className="container">
       <div style={{ marginBottom: 40 }}>
@@ -26,7 +33,7 @@ export default async function Home() {
 
       <div>
         <h2 style={{ fontSize: '1.5rem', marginBottom: 24 }}>Catálogo Completo</h2>
-        <CourseCatalog initialCourses={(courses as any) ?? []} categories={(categories as any) ?? []} />
+        <CourseCatalog initialCourses={normalizedCourses} categories={categories ?? []} />
       </div>
     </div>
   );

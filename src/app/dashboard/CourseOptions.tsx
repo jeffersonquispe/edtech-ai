@@ -28,23 +28,19 @@ export default function CourseOptions({
   const [isDeleting, setIsDeleting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   const handleUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setSuccess('');
 
     const form = e.currentTarget;
     const formData = new FormData(form);
 
     try {
       await updateCourse(courseId, formData);
-      setSuccess('Curso actualizado');
       setIsEditing(false);
       onUpdate?.();
-      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al actualizar');
     } finally {
@@ -62,7 +58,6 @@ export default function CourseOptions({
 
     try {
       await deleteCourse(courseId);
-      setSuccess('Curso eliminado');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al eliminar');
       setLoading(false);

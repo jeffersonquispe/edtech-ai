@@ -59,7 +59,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
   const precio = formData.get('precio') as string | null;
   const estado = formData.get('estado') as string | null;
 
-  const patch: Record<string, any> = {};
+  const patch: Record<string, string | number> = {};
 
   if (titulo) {
     const validation = validateTitle(titulo);
