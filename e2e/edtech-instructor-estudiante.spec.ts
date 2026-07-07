@@ -135,16 +135,12 @@ test.describe.serial('EdTech - Flujos Instructor → Estudiante', () => {
         console.log(`🚀 Publicando curso...`);
         await publishButton.click();
 
-        // No confiar en networkidle: la server action puede tardar más de lo
-        // que networkidle espera. Verifica el estado real recargando hasta que
-        // el badge diga "published" (o falla explícitamente si nunca ocurre,
-        // en vez de fallar 30s después en un locator sin relación aparente).
-        await expect(async () => {
-          await page.reload();
-          await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-          const badgeText = await courseCard.locator('.badge').textContent().catch(() => null);
-          expect(badgeText).toBe('published');
-        }).toPass({ timeout: 20000, intervals: [1000, 2000, 4000] });
+        // IMPORTANTE: NO recargar la página aquí. `publishCourse` es una server
+        // action; recargar de inmediato aborta el POST en vuelo antes de que
+        // commitee, dejando el curso en `draft`. En su lugar esperamos la
+        // actualización in-place que hace `revalidatePath`: al publicar, el
+        // badge pasa a "published" y el botón Publicar desaparece.
+        await expect(courseCard.locator('.badge')).toHaveText('published', { timeout: 15000 });
 
         console.log(`✅ Curso publicado (badge confirma estado "published")`);
       } else {
