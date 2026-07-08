@@ -16,3 +16,6 @@ coverage
 /playwright/.auth/
 /e2e/.auth/
 /e2e/errors/
+
+.vercel
+.env*
