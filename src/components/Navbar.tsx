@@ -36,7 +36,7 @@ export default function Navbar() {
         <span style={{ color: 'var(--color-indigo)' }}>Platform</span>
         <span style={{ width: '6px', height: '6px', backgroundColor: 'var(--color-sage)', borderRadius: '50%', boxShadow: '0 0 8px var(--color-sage)', display: 'inline-block' }} title="Plataforma activa"></span>
       </Link>
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: '0 var(--space-md)' }}>
+      <div className="nav-search">
         <NavbarSearch />
       </div>
       <div className="nav-links">

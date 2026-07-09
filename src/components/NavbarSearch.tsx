@@ -141,7 +141,8 @@ export default function NavbarSearch() {
             padding: '8px 10px',
             borderRadius: 8,
             border: '1px solid #e5e7eb',
-            background: 'transparent',
+            background: 'var(--color-indigo)',
+            color: '#fff',
             cursor: 'pointer',
           }}
         >
