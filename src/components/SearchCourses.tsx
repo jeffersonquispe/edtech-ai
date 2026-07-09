@@ -14,8 +14,8 @@ interface SearchResult {
   similarity?: number;
 }
 
-export default function SearchCourses() {
-  const [query, setQuery] = useState('');
+export default function SearchCourses({ initialQuery }: { initialQuery?: string }) {
+  const [query, setQuery] = useState(initialQuery ?? '');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -85,6 +85,13 @@ export default function SearchCourses() {
         clearTimeout(debounceTimer.current);
       }
     };
+  }, []);
+
+  useEffect(() => {
+    if (initialQuery && initialQuery.trim()) {
+      performSearch(initialQuery);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

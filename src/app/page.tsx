@@ -2,7 +2,12 @@ import { createClient } from '@/lib/supabase/server';
 import CourseCatalog from './CourseCatalog';
 import SearchCourses from '@/components/SearchCourses';
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
   const supabase = await createClient();
 
   const [{ data: courses }, { data: categories }] = await Promise.all([
@@ -29,7 +34,7 @@ export default async function Home() {
     <div className="container">
       <div style={{ marginBottom: 40 }}>
         <h1 style={{ fontSize: '2rem', marginBottom: 24 }}>Explorar Cursos</h1>
-        <SearchCourses />
+        <SearchCourses initialQuery={q} />
       </div>
 
       <div>

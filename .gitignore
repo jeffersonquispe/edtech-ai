@@ -19,3 +19,6 @@ coverage
 
 .vercel
 .env*
+
+# Claude Code hook state (ephemeral)
+.claude/verify-state.json

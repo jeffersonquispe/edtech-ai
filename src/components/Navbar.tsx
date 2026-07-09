@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
+import NavbarSearch from './NavbarSearch';
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
@@ -35,6 +36,9 @@ export default function Navbar() {
         <span style={{ color: 'var(--color-indigo)' }}>Platform</span>
         <span style={{ width: '6px', height: '6px', backgroundColor: 'var(--color-sage)', borderRadius: '50%', boxShadow: '0 0 8px var(--color-sage)', display: 'inline-block' }} title="Plataforma activa"></span>
       </Link>
+      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: '0 var(--space-md)' }}>
+        <NavbarSearch />
+      </div>
       <div className="nav-links">
         {user ? (
           <>
