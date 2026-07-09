@@ -13,6 +13,15 @@ npm run test       # Run Vitest once
 npm run test:watch # Vitest watch mode
 ```
 
+## Flujo de entrega — autónomo, sin pausas de aprobación
+
+Ver [docs/FLUJO-PROYECTO.md](docs/FLUJO-PROYECTO.md) para el detalle completo. Reglas operativas para Claude Code en este repo:
+
+- Cuando una tarea encaje en el flujo OpenSpec (feature/fix no trivial), encadena **`/opsx:propose` → `/opsx:apply` → `/opsx:sync` (si aplica) → `/opsx:archive`** de punta a punta **sin detenerte a pedir aprobación en ningún paso intermedio**, incluida la revisión del proposal antes de implementar. Muestra el `proposal.md` generado en el chat por transparencia, pero no esperes un "sí, procede" explícito para pasar a `/opsx:apply` — el usuario puede interrumpir en caliente si no está de acuerdo (así opera este proyecto: Auto Mode).
+- Al terminar cada turno, el hook `Stop` (`scripts/verify-flow.ps1`) corre lint+test y, si pasan, hace commit + push a `main` automáticamente — no pidas confirmación para eso, ya está configurado así a propósito.
+- Al iniciar sesión, el hook `SessionStart` (`scripts/check-ci-status.ps1`) reporta el estado del último run de CI en `main` y los *changes* de OpenSpec activos sin archivar. Si reporta que el último run pasó y hay un change activo correspondiente a lo que se acaba de desplegar, corre `/opsx:archive` tú mismo sin preguntar.
+- La única forma de frenar esta cadena es que el usuario lo pida explícitamente en el chat (p.ej. "para", "no hagas push todavía"). Sin esa señal, el default es seguir de largo.
+
 ## Architecture
 
 Full-stack EdTech LMS: **Next.js 15 App Router** + **Supabase** (PostgreSQL + Auth) + **RLS as single source of truth for authorization**.

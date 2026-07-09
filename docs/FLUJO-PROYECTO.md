@@ -6,14 +6,11 @@ Este documento describe el flujo end-to-end del proyecto, desde que surge una ne
 Historia de usuario / idea
         │
         ▼
-   OpenSpec: /opsx:propose
+   OpenSpec: /opsx:propose  (autónomo, Claude lo dispara solo)
    (proposal.md + design.md + specs delta + tasks.md)
-        │
+        │                     ← se muestra en el chat, sin pausa de aprobación
         ▼
-   Revisión humana del proposal
-        │
-        ▼
-   OpenSpec: /opsx:apply
+   OpenSpec: /opsx:apply  (autónomo, encadenado)
    (implementación tarea por tarea, checklist en tasks.md)
         │
         ▼
@@ -48,10 +45,13 @@ Historia de usuario / idea
    changes de OpenSpec activos sin archivar
         │
         ▼
-   OpenSpec: /opsx:archive
+   OpenSpec: /opsx:archive  (autónomo: Claude lo corre solo
+   si SessionStart reporta CI verde + change activo)
    (mueve el change a openspec/changes/archive/,
     sincroniza specs delta → openspec/specs/)
 ```
+
+Toda la cadena — `propose → apply → sync → archive`, más lint/test/commit/push/CI/deploy — corre sin pausas de aprobación intermedias (ver [CLAUDE.md](../CLAUDE.md#flujo-de-entrega--autónomo-sin-pausas-de-aprobación)). El proposal y cada paso se muestran en el chat por transparencia, pero Claude no espera un "sí, procede" para continuar: el usuario frena la cadena interrumpiendo explícitamente, no aprobándola de antemano.
 
 ## 1. Historias de usuario / necesidad de negocio
 
@@ -67,12 +67,11 @@ El repo usa [OpenSpec](openspec/config.yaml) (`schema: spec-driven`) como capa d
   - `specs/` (delta) — requisitos formales nuevos/modificados por capability.
   - `tasks.md` — checklist de implementación.
 - **`/opsx:explore`** (opcional) — modo de pensamiento libre para investigar el problema antes de proponer, cuando el requisito no está claro.
-- Revisión humana del proposal antes de escribir código: se valida el *qué* y el *por qué* antes del *cómo*.
 - **`/opsx:apply`** — implementa las tareas de `tasks.md` una por una, marcando el checklist a medida que avanza.
 - **`/opsx:sync`** — sincroniza las specs delta del change hacia `openspec/specs/` (specs "vivas" del proyecto) sin archivar, útil si se necesita reflejar avance parcial.
 - **`/opsx:archive`** — al terminar la implementación, archiva el change en `openspec/changes/archive/` y confirma la sincronización final de specs.
 
-Este flujo deja un rastro auditable: cada feature tiene su proposal, su diseño y sus specs versionados en el repo, independientemente del código.
+Claude encadena `propose → apply → sync → archive` de forma autónoma (ver [CLAUDE.md](../CLAUDE.md)): el `proposal.md` se muestra en el chat por trazabilidad, pero no hay una pausa que espere aprobación explícita antes de pasar a `apply`. El rastro auditable (proposal, diseño y specs versionados en el repo) sigue existiendo — lo que cambió es que ya no es un gate bloqueante, sino un registro que el usuario puede revisar e interrumpir en cualquier momento.
 
 ## 3. Implementación
 
@@ -146,15 +145,16 @@ Una vez el change está en producción y validado, se archiva con `/opsx:archive
 - El proposal y diseño originales en `openspec/changes/archive/<nombre-del-change>/`.
 - Las specs actualizadas en `openspec/specs/` reflejando el nuevo comportamiento del sistema.
 
-`/opsx:archive` sigue siendo una acción manual por diseño (igual que la revisión humana del proposal en el paso 2): archivar es una decisión de "esto ya está validado en prod", que no se puede inferir solo con que CI haya pasado. El hook `SessionStart` (sección 4) no lo dispara automáticamente, solo lo recuerda listando los changes activos.
+`/opsx:archive` es autónomo: el hook `SessionStart` (`scripts/check-ci-status.ps1`, sección 4) reporta el estado del último run de CI en `main` y los changes activos sin archivar; si el run pasó y corresponde al change recién trabajado, Claude corre `/opsx:archive` sin preguntar. El hook en sí no ejecuta el archive (es una operación *agent-driven*, requiere criterio para decidir qué change corresponde y hacer el merge inteligente de specs) — solo le da a Claude la señal para hacerlo él mismo.
 
-Esto cierra el ciclo: **historia de usuario → proposal (OpenSpec) → diseño → implementación → tests → hook Stop (lint/unit + auto commit/push) → CI (lint/unit/e2e) → deploy a Vercel → hook SessionStart (recordatorio) → archivo de spec**.
+Esto cierra el ciclo: **historia de usuario → proposal (OpenSpec, autónomo) → implementación (autónoma) → tests → hook Stop (lint/unit + auto commit/push) → CI (lint/unit/e2e) → deploy a Vercel → hook SessionStart (señal) → archivo de spec (autónomo)**.
 
-## 8. Qué quedó fuera de la automatización (a propósito)
+## 8. Cómo se frena esta cadena si hace falta
 
-No todo el flujo se automatizó — dos puntos se mantienen como gates humanos deliberados:
+El flujo completo — propose, apply, sync, archive, commit, push, y el deploy que dispara CI — corre sin pausas de aprobación por defecto (ver [CLAUDE.md](../CLAUDE.md)). No hay gates bloqueantes deliberados: fue una decisión explícita de priorizar velocidad de iteración.
 
-- **Revisión del proposal** (paso 2): el *qué* y el *por qué* de un change se validan antes de escribir código. Automatizarlo eliminaría el único punto donde un humano decide si vale la pena construir algo.
-- **`/opsx:archive`** (paso 7): cerrar un change es una afirmación de "esto ya funciona en producción", y eso requiere criterio humano, no solo un CI verde.
+Eso significa que el único freno es que **el usuario lo pida en el chat** — interrumpir, decir "para", "no subas esto todavía", "revisa el proposal antes de aplicar", etc. Cosas a tener en cuenta:
 
-Todo lo demás — lint/test local, commit, push, CI, deploy — es hoy automático vía hooks de Claude Code o GitHub Actions.
+- El `proposal.md`, los diffs de código, y los mensajes de cada hook se siguen mostrando en el chat, así que hay visibilidad de lo que está pasando aunque no se pida aprobación explícita.
+- Si algo llega a producción y no debía, el rastro auditable de OpenSpec (proposal + specs versionados) y el historial de git permiten revertir con contexto claro de qué se intentó y por qué.
+- Este nivel de automatización es específico de este repo (decisión tomada explícitamente para este proyecto) — no asumir que aplica a otros repos sin la misma configuración de hooks y de CLAUDE.md.
