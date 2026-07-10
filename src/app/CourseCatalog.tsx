@@ -35,7 +35,7 @@ export default function CourseCatalog({
       {/* Hero Section */}
       <header className="hero-section">
         <div className="hero-accent-line"></div>
-        <h1 className="hero-title">Aprende sin límites.</h1>
+        <h1 className="hero-title">Primero lo nuestro, apunta a IA</h1>
         <p className="hero-subtitle">
           Explora cursos dictados por profesionales de la industria y potencia tu carrera en tecnología, diseño y negocios.
         </p>
